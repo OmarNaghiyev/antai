@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Difficulty {
+  beginner
+  intermediate
+  advanced
+  expert
+}
+
+enum GrowthPace {
+  slow
+  medium
+  fast
+}
+
+enum Aggressiveness {
+  calm
+  moderate
+  aggressive
+}
+
+enum GuideCategory {
+  beginner
+}
+
+enum ContentStatus {
+  draft
+  published
+}
+
+model Species {
+  id                String              @id @default(cuid())
+  slug              String              @unique
+  scientificName    String              @unique
+  genus             String
+  subfamily         String?
+  tribe             String?
+  beginnerFriendly  Boolean             @default(false)
+  difficulty        Difficulty
+  colonySizeMin     Int?
+  colonySizeMax     Int?
+  colonyGrowth      GrowthPace
+  aggressiveness    Aggressiveness
+  diapauseRequired  Boolean             @default(false)
+  diapauseNotes     String?             @db.Text
+  temperatureMinC   Decimal?            @db.Decimal(4, 1)
+  temperatureMaxC   Decimal?            @db.Decimal(4, 1)
+  humidityMin       Int?
+  humidityMax       Int?
+  foundingMode      String?
+  workerSizeMinMm   Decimal?            @db.Decimal(4, 1)
+  workerSizeMaxMm   Decimal?            @db.Decimal(4, 1)
+  proteinFoods      String[]
+  sugarFoods        String[]
+  summary           String              @db.Text
+  highlights        String[]
+  status            ContentStatus       @default(draft)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  commonNames       SpeciesCommonName[]
+  originConnections SpeciesRegion[]
+}
+
+model SpeciesCommonName {
+  id        String  @id @default(cuid())
+  speciesId String
+  locale    String
+  name      String
+  isPrimary Boolean @default(false)
+  species   Species @relation(fields: [speciesId], references: [id], onDelete: Cascade)
+
+  @@unique([speciesId, locale, name])
+  @@index([locale, name])
+}
+
+model Region {
+  id        String          @id @default(cuid())
+  slug      String          @unique
+  name      String
+  labelRu   String?
+  parentId  String?
+  parent    Region?         @relation("RegionTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children  Region[]        @relation("RegionTree")
+  species   SpeciesRegion[]
+}
+
+model SpeciesRegion {
+  speciesId String
+  regionId  String
+  note      String?
+  species   Species @relation(fields: [speciesId], references: [id], onDelete: Cascade)
+  region    Region  @relation(fields: [regionId], references: [id], onDelete: Cascade)
+
+  @@id([speciesId, regionId])
+  @@index([regionId])
+}
+
+model Guide {
+  id        String        @id @default(cuid())
+  slug      String        @unique
+  title     String
+  excerpt   String
+  category  GuideCategory
+  bodyMdx   String        @db.Text
+  sortOrder Int           @default(0)
+  status    ContentStatus @default(draft)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
